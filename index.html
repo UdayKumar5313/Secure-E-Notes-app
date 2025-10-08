@@ -9,6 +9,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         :root {
             --bg-primary: #111827; 
@@ -306,9 +308,6 @@
             </div>
         </div>
     </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
 
     <script type="module">
         // --- Firebase SDKs ---
@@ -911,6 +910,43 @@
                 trashListEl.appendChild(noteEl);
             });
         }
+
+        function renderAuditLogs(logs) {
+            const listEl = el('audit-log-list');
+            if (!listEl) return;
+
+            listEl.innerHTML = ''; // Clear previous logs
+
+            if (logs.length === 0) {
+                listEl.innerHTML = '<p class="text-dynamic-secondary">No audit log entries found.</p>';
+                return;
+            }
+
+            logs.forEach(log => {
+                const logEl = document.createElement('div');
+                logEl.className = 'p-3 bg-dynamic-tertiary rounded-lg text-sm';
+
+                const timestamp = new Date(log.timestamp).toLocaleString();
+                const actionText = log.action.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+                
+                let detailsText = '';
+                if (log.details && Object.keys(log.details).length > 0) {
+                    try {
+                        const detailsString = JSON.stringify(log.details);
+                         detailsText = `<div class="text-xs text-gray-400 mt-1 pl-2 border-l-2 border-gray-600">Details: ${detailsString}</div>`;
+                    } catch(e) { /* ignore circular refs */ }
+                }
+
+                logEl.innerHTML = `
+                    <div>
+                        <span class="font-semibold text-purple-400">${actionText}</span>
+                        <span class="text-xs text-gray-500 float-right">${timestamp}</span>
+                    </div>
+                    ${detailsText}
+                `;
+                listEl.appendChild(logEl);
+            });
+        }
         
         // --- Event Listeners Setup ---
         masterPasswordSetupForm.addEventListener('submit', (e) => {
@@ -984,6 +1020,4 @@
     </script>
 </body>
 </html>
-
-
 
