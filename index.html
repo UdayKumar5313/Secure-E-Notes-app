@@ -317,11 +317,32 @@
 
         // --- Global Config & State ---
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
         
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        // IMPORTANT: Firebase Configuration
+        // To deploy this app on your own, create a Firebase project and paste your web app's configuration here.
+        // Get this from your Firebase project settings -> General -> Your apps -> Web app -> SDK setup and configuration
+        const firebaseConfig_placeholder = {
+          apiKey: "YOUR_API_KEY",
+          authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+          projectId: "YOUR_PROJECT_ID",
+          storageBucket: "YOUR_PROJECT_ID.appspot.com",
+          messagingSenderId: "YOUR_SENDER_ID",
+          appId: "YOUR_APP_ID"
+        };
+
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : firebaseConfig_placeholder;
+        
+        let app, auth, db;
+
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+        } catch (error) {
+            console.error("Firebase initialization failed:", error);
+            // The inline script will show a warning if the placeholder is used, so no extra UI handling is needed here.
+            // This try-catch prevents a full crash if the config is malformed.
+        }
 
         let currentUser = null; 
         let notesUnsubscribe = null; 
@@ -418,7 +439,7 @@
 
         // --- Core Application Logic ---
         const logActivity = async (action, details = {}) => {
-            if (!currentUser) return;
+            if (!currentUser || !db) return;
             try {
                 const logData = {
                     action,
@@ -434,6 +455,7 @@
         };
         
         async function completeLogin() {
+            if (!auth) return; // Don't proceed if Firebase auth failed to initialize
             onAuthStateChanged(auth, user => { 
                 if (user) { 
                     currentUser = user; 
@@ -449,13 +471,13 @@
                 else { await signInAnonymously(auth); }
             } catch (error) {
                 console.error("Authentication failed:", error);
-                showToast('error', 'Could not authenticate session.');
+                showToast('error', 'Could not authenticate session. Check Firebase domain authorization.');
                 hideLoader();
             }
         }
 
         function loadNotes() { 
-            if (!currentUser) return; 
+            if (!currentUser || !db) return; 
 
             // --- Optimization: Show immediate loading state in the notes panel ---
             notesListEl.innerHTML = `
@@ -498,7 +520,7 @@
         }
 
         function loadTrash() { 
-            if (!currentUser) return; 
+            if (!currentUser || !db) return; 
             const trashCollection = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'trash'); 
             if (trashUnsubscribe) trashUnsubscribe(); 
             trashUnsubscribe = onSnapshot(trashCollection, (snapshot) => { 
@@ -507,7 +529,7 @@
         }
         
         function loadAuditLogs() {
-            if (!currentUser) return;
+            if (!currentUser || !db) return;
             const logsCollection = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'audit_logs');
             const q = query(logsCollection, orderBy("timestamp", "desc"), limit(100));
 
@@ -1013,6 +1035,19 @@
 
             if (appLockModal) {
                 appLockModal.classList.add('active');
+            }
+
+            // This check is duplicated in the module, but is necessary here for the initial UI.
+             const firebaseConfig_placeholder = { apiKey: "YOUR_API_KEY" };
+             if (firebaseConfig_placeholder.apiKey === "YOUR_API_KEY" && typeof __firebase_config === 'undefined') {
+                const setupDiv = document.getElementById('master-password-setup');
+                const loginDiv = document.getElementById('master-password-login');
+                const warningHTML = `<div style="background-color: #7f1d1d; color: white; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; text-align: left;">
+                    <h3 style="font-weight: bold; font-size: 1.1rem; margin-bottom: 0.5rem;">Configuration Needed</h3>
+                    <p style="font-size: 0.9rem;">This application is not connected to a database. Please follow the instructions in the HTML file to set up your Firebase configuration to use it on your own site.</p>
+                </div>`;
+                if(setupDiv) setupDiv.insertAdjacentHTML('afterbegin', warningHTML);
+                if(loginDiv) loginDiv.insertAdjacentHTML('afterbegin', warningHTML);
             }
 
             const salt = localStorage.getItem(MASTER_PASS_SALT_KEY);
