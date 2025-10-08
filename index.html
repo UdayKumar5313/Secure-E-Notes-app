@@ -318,19 +318,17 @@
         // --- Global Config & State ---
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         
-        // IMPORTANT: Firebase Configuration
-        // To deploy this app on your own, create a Firebase project and paste your web app's configuration here.
-        // Get this from your Firebase project settings -> General -> Your apps -> Web app -> SDK setup and configuration
-        const firebaseConfig_placeholder = {
-          apiKey: "YOUR_API_KEY",
-          authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-          projectId: "YOUR_PROJECT_ID",
-          storageBucket: "YOUR_PROJECT_ID.appspot.com",
-          messagingSenderId: "YOUR_SENDER_ID",
-          appId: "YOUR_APP_ID"
+        // This is the configuration you provided.
+        const firebaseConfig_from_user = {
+          apiKey: "AIzaSyBDzoObYxGLMhP8_-xkOsWp2fvXWYlWniY",
+          authDomain: "adaptistudy.firebaseapp.com",
+          projectId: "adaptistudy",
+          storageBucket: "adaptistudy.firebasestorage.app",
+          messagingSenderId: "881929223792",
+          appId: "1:881929223792:web:ccc93653fa969e3cfa3eb5"
         };
 
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : firebaseConfig_placeholder;
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : firebaseConfig_from_user;
         
         let app, auth, db;
 
@@ -1038,7 +1036,7 @@
             }
 
             // This check is duplicated in the module, but is necessary here for the initial UI.
-             const firebaseConfig_placeholder = { apiKey: "YOUR_API_KEY" };
+            const firebaseConfig_placeholder = { apiKey: "AIzaSyBDzoObYxGLMhP8_-xkOsWp2fvXWYlWniY" }; // Use a real value to check against
              if (firebaseConfig_placeholder.apiKey === "YOUR_API_KEY" && typeof __firebase_config === 'undefined') {
                 const setupDiv = document.getElementById('master-password-setup');
                 const loginDiv = document.getElementById('master-password-login');
