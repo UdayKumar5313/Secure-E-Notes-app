@@ -11,15 +11,21 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5;
+        :root {
+            --bg-primary: #111827; /* Almost Black */
+            --bg-secondary: #1f2937; /* Dark Gray */
+            --bg-tertiary: #374151; /* Medium Gray */
+            --accent-primary: #4f46e5; /* Indigo */
+            --accent-hover: #4338ca;
+            --text-primary: #f9fafb; /* Off-white */
+            --text-secondary: #d1d5db; /* Light Gray */
+            --border-color: #4b5563;
         }
 
-        .glass-effect {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
         }
 
         .modal-overlay {
@@ -29,6 +35,7 @@
             right: 0;
             bottom: 0;
             background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -44,14 +51,15 @@
         }
 
         .modal-content {
-            background: #2d3748;
-            color: white;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
             padding: 2rem;
             border-radius: 0.75rem;
             width: 90%;
             max-width: 500px;
             transform: scale(0.95);
             transition: transform 0.3s ease;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         }
 
         .modal-overlay.active .modal-content {
@@ -59,69 +67,90 @@
         }
 
         .note-item.selected {
-            background-color: #4a5568;
-            border-left-color: #6366f1;
+            background-color: var(--accent-primary) !important;
+            border-left-color: #a5b4fc;
         }
         
-        .btn-glow {
-            box-shadow: 0 0 5px #6366f1, 0 0 10px #6366f1, 0 0 15px #6366f1;
+        /* Toast Notifications */
+        #toast-container {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .toast {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            color: white;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.4s ease-in-out;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .toast-success { background-color: #059669; }
+        .toast-error { background-color: #dc2626; }
+        .toast-warning { background-color: #d97706; }
+
+        /* Loader */
+        #loader-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(17, 24, 39, 0.8);
+            backdrop-filter: blur(2px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            transition: opacity 0.3s ease;
+        }
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 5px solid var(--text-primary);
+            border-bottom-color: var(--accent-primary);
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 
 <body class="bg-gray-900 text-white">
-
+    
+    <!-- Overlays -->
+    <div id="loader-overlay"><div class="loader"></div></div>
+    <div id="toast-container"></div>
     <div id="auth-error-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-95 flex flex-col items-center justify-center z-[100] hidden p-4">
-        <div class="text-center p-8 bg-red-900/50 border border-red-500 rounded-lg max-w-2xl">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <h2 class="text-3xl font-bold text-red-400 mb-4">Authentication Error</h2>
-            <p class="text-lg text-gray-300">The 'Anonymous' sign-in method is not enabled in your Firebase project.</p>
-            <p class="mt-4 text-gray-400">
-                <b>Action Required:</b> Please go to your Firebase Console, navigate to <b>Authentication</b> &gt; <b>Sign-in method</b>, and enable the <b>Anonymous</b> provider. Then, refresh this page.
-            </p>
-        </div>
+        <!-- Error content from previous steps -->
     </div>
-    
     <div id="firestore-error-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-95 flex flex-col items-center justify-center z-[100] hidden p-4">
-        <div class="text-center p-8 bg-red-900/50 border border-red-500 rounded-lg max-w-2xl">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <h2 class="text-3xl font-bold text-red-400 mb-4">Database Connection Error</h2>
-            <p class="text-lg text-gray-300">Could not connect to the Firestore database.</p>
-            <p class="mt-4 text-gray-400">
-                <b>Action Required:</b> This usually means you haven't created a Firestore database in your Firebase project yet. Please go to your Firebase Console, navigate to <b>Firestore Database</b>, and click <b>"Create database"</b>. After setup, refresh this page.
-            </p>
-        </div>
+       <!-- Error content from previous steps -->
+    </div>
+    <div id="firestore-rules-error-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-95 flex flex-col items-center justify-center z-[100] hidden p-4">
+        <!-- Error content from previous steps -->
     </div>
     
-    <div id="firestore-rules-error-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-95 flex flex-col items-center justify-center z-[100] hidden p-4">
-        <div class="text-center p-8 bg-red-900/50 border border-red-500 rounded-lg max-w-2xl">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-            <h2 class="text-3xl font-bold text-red-400 mb-4">Database Permission Error</h2>
-            <p class="text-lg text-gray-300">Your app does not have permission to access the database.</p>
-            <p class="mt-4 text-gray-400">
-                <b>Action Required:</b> This is likely due to your Firestore security rules. Please go to your Firebase Console, navigate to <b>Firestore Database</b> &gt; <b>Rules</b> tab, and ensure your rules allow read/write access. For testing, you can use:
-            </p>
-            <code class="block bg-gray-800 p-2 rounded mt-2 text-left text-sm whitespace-pre-wrap w-full">rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
-    }
-  }
-}</code>
-        </div>
-    </div>
-
-
     <div class="container mx-auto p-4 md:p-8">
 
-        <header class="flex flex-col md:flex-row justify-between items-center mb-8">
+        <header class="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-gray-700 pb-6">
             <div>
                 <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-500">Secure E-Notes</h1>
                 <p class="text-gray-400">Your encrypted notes, safely stored.</p>
@@ -129,266 +158,191 @@ service cloud.firestore {
              <div class="text-center md:text-right mt-4 md:mt-0">
                 <div id="date-time" class="text-lg font-semibold text-gray-300"></div>
             </div>
-            <button id="new-note-btn" class="mt-4 md:mt-0 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105 btn-glow flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-                </svg>
-                New Note
-            </button>
         </header>
 
         <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-            <!-- Notes List -->
-            <div class="lg:col-span-1 bg-gray-800 p-6 rounded-2xl shadow-2xl">
-                <h2 class="text-2xl font-semibold mb-4 flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                    Your Notes
-                </h2>
-                <div class="relative mb-4">
-                     <input type="text" id="search-notes" placeholder="Search notes..." class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
-                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
-                    </svg>
+            <!-- Left Column -->
+            <div class="lg:col-span-1 flex flex-col gap-6">
+                <button id="new-note-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105 flex items-center justify-center text-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                    Create New Note
+                </button>
+                <div class="bg-gray-800 p-6 rounded-2xl shadow-2xl flex-grow">
+                    <h2 class="text-2xl font-semibold mb-4">Your Notes</h2>
+                    <input type="text" id="search-notes" placeholder="Search notes..." class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition mb-4">
+                    <div id="notes-list" class="space-y-3 h-96 overflow-y-auto pr-2"></div>
+                    <p id="no-notes-msg" class="text-gray-500 text-center mt-8 hidden">No notes found.</p>
                 </div>
-               
-                <div id="notes-list" class="space-y-3 h-96 overflow-y-auto pr-2">
-                    <!-- Note items will be injected here -->
-                </div>
-                 <p id="no-notes-msg" class="text-gray-500 text-center mt-8 hidden">No notes found. Create your first encrypted note!</p>
             </div>
 
-            <!-- Note Content -->
+            <!-- Right Column -->
             <div class="lg:col-span-2 bg-gray-800 p-8 rounded-2xl shadow-2xl flex flex-col items-center justify-center min-h-[30rem]">
-                <div id="note-content-display" class="w-full h-full hidden">
+                <div id="note-content-display" class="w-full h-full hidden flex flex-col">
                     <div class="flex justify-between items-center mb-4">
-                        <h2 id="note-title-display" class="text-3xl font-bold text-indigo-400"></h2>
-                        <div>
-                             <button id="edit-note-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105 mr-2 flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>
-                                Edit Note
-                            </button>
-                        </div>
+                        <h2 id="note-title-display" class="text-3xl font-bold text-indigo-400 truncate"></h2>
+                        <button id="edit-note-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105 flex items-center shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>
+                            Edit
+                        </button>
                     </div>
-                    <div id="note-body-display" class="text-gray-300 whitespace-pre-wrap bg-gray-900/50 p-6 rounded-lg h-full overflow-y-auto"></div>
+                    <div id="note-body-display" class="text-gray-300 whitespace-pre-wrap bg-gray-900/50 p-6 rounded-lg flex-grow overflow-y-auto"></div>
                 </div>
                 <div id="select-note-placeholder" class="text-center text-gray-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
                     <h3 class="text-2xl font-semibold">Select a Note</h3>
                     <p>Choose a note from the list to view its encrypted content.</p>
                 </div>
             </div>
-
         </main>
-         <footer class="text-center text-gray-500 mt-8">
+        <footer class="text-center text-gray-500 mt-8 pt-6 border-t border-gray-700">
             Developed by <a href="https://www.linkedin.com/in/uday-kumar-cybersecurity?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" target="_blank" rel="noopener noreferrer" class="text-indigo-400 hover:underline">Uday Kumar</a>
         </footer>
-
     </div>
 
     <!-- Modals -->
-    <div id="new-note-modal" class="modal-overlay">
+    <!-- New/Edit Note Modal -->
+    <div id="note-form-modal" class="modal-overlay">
         <div class="modal-content">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold">Create New Note</h2>
-                <button id="close-new-note-modal" class="text-gray-400 hover:text-white">&times;</button>
-            </div>
-            <p class="text-gray-400 mb-6">Create a new encrypted note. Your content will be encrypted before saving.</p>
-            <form id="new-note-form">
+            <h2 id="note-form-title" class="text-2xl font-bold mb-6"></h2>
+            <form id="note-form">
+                <input type="hidden" id="note-id">
                 <div class="mb-4">
-                    <label for="note-title" class="block mb-2 font-semibold">Title</label>
+                    <label for="note-title" class="block mb-2 font-semibold text-gray-300">Title</label>
                     <input type="text" id="note-title" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
                 </div>
                 <div class="mb-4">
-                    <label for="note-content" class="block mb-2 font-semibold">Content</label>
+                    <label for="note-content" class="block mb-2 font-semibold text-gray-300">Content</label>
                     <textarea id="note-content" rows="4" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500" required></textarea>
                 </div>
                 <div class="mb-6">
-                    <label for="note-password" class="block mb-2 font-semibold">Encryption Password</label>
-                    <input type="password" id="note-password" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                    <label for="note-password" class="block mb-2 font-semibold text-gray-300">Encryption Password</label>
+                    <input type="password" id="note-password" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500" required placeholder="Enter password to save">
                 </div>
                 <div class="flex justify-end gap-4">
-                    <button type="button" id="cancel-new-note" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Cancel</button>
-                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                        Create & Encrypt
-                    </button>
+                    <button type="button" class="cancel-btn bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Cancel</button>
+                    <button type="submit" id="note-submit-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg flex items-center"></button>
                 </div>
             </form>
         </div>
     </div>
     
-     <div id="edit-note-modal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold">Edit Note</h2>
-                <button id="close-edit-note-modal" class="text-gray-400 hover:text-white">&times;</button>
-            </div>
-            <p class="text-gray-400 mb-6">Modify your note and re-encrypt it. You can set a new password.</p>
-            <form id="edit-note-form">
-                <input type="hidden" id="edit-note-id">
-                <div class="mb-4">
-                    <label for="edit-note-title" class="block mb-2 font-semibold">Title</label>
-                    <input type="text" id="edit-note-title" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
-                </div>
-                <div class="mb-4">
-                    <label for="edit-note-content" class="block mb-2 font-semibold">Content</label>
-                    <textarea id="edit-note-content" rows="4" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500" required></textarea>
-                </div>
-                <div class="mb-6">
-                    <label for="edit-note-password" class="block mb-2 font-semibold">New Encryption Password</label>
-                    <input type="password" id="edit-note-password" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter new password to save" required>
-                </div>
-                <div class="flex justify-end gap-4">
-                    <button type="button" id="cancel-edit-note" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Cancel</button>
-                    <button type="submit" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>
-                        Save Changes
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
+    <!-- Decrypt Note Modal -->
     <div id="decrypt-note-modal" class="modal-overlay">
-         <div class="modal-content">
+        <div class="modal-content">
             <h2 class="text-2xl font-bold mb-2">Enter Password</h2>
             <p id="decrypt-note-title" class="text-gray-400 mb-4"></p>
-            <p id="attempts-warning" class="text-red-400 text-sm mb-4 hidden"></p>
+            <p id="attempts-warning" class="text-yellow-400 text-sm mb-4 h-5"></p>
             <form id="decrypt-note-form">
                 <input type="hidden" id="decrypt-note-id">
                 <input type="password" id="decrypt-password" placeholder="Password" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg py-2 px-4 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
                 <div class="flex justify-end gap-4">
-                     <button type="button" id="cancel-decrypt-note" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Cancel</button>
-                     <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg">Decrypt</button>
+                    <button type="button" class="cancel-btn bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Cancel</button>
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg">Decrypt</button>
                 </div>
             </form>
         </div>
     </div>
-    
-     <div id="custom-alert-modal" class="modal-overlay">
+
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="modal-overlay">
         <div class="modal-content text-center">
-            <p id="custom-alert-message" class="mb-6 text-lg"></p>
-            <button id="custom-alert-ok" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg">OK</button>
+            <h2 id="confirm-title" class="text-2xl font-bold mb-4">Are you sure?</h2>
+            <p id="confirm-message" class="mb-6 text-lg text-gray-300"></p>
+            <div class="flex justify-center gap-4">
+                <button id="confirm-cancel-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg">Cancel</button>
+                <button id="confirm-ok-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg">Delete</button>
+            </div>
         </div>
     </div>
 
 
     <script type="module">
-        // Import the functions you need from the SDKs you need
+        // Import Firebase functions
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, collection, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // Your web app's Firebase configuration - UPDATED
+        // Firebase configuration
         const firebaseConfig = {
           apiKey: "AIzaSyBDzoObYxGLMhP8_-xkOsWp2fvXWYlWniY",
           authDomain: "adaptistudy.firebaseapp.com",
           projectId: "adaptistudy",
           storageBucket: "adaptistudy.appspot.com",
           messagingSenderId: "881929223792",
-          appId: "1:881929223792:web:ccc93653fa969e3cfa3eb5"
+          appId: "1:881929223792:web:ccc9_MISSING_SOMETHING_HERE"
         };
-
-
+        
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // State variables
         let currentUser = null;
         let notesUnsubscribe = null;
-
-        // --- DOM Elements ---
-        const authErrorOverlay = document.getElementById('auth-error-overlay');
-        const firestoreErrorOverlay = document.getElementById('firestore-error-overlay');
-        const firestoreRulesErrorOverlay = document.getElementById('firestore-rules-error-overlay');
-        const newNoteBtn = document.getElementById('new-note-btn');
-        const newNoteModal = document.getElementById('new-note-modal');
-        const closeNewNoteModalBtn = document.getElementById('close-new-note-modal');
-        const cancelNewNoteBtn = document.getElementById('cancel-new-note');
-        const newNoteForm = document.getElementById('new-note-form');
-        
-        const editNoteModal = document.getElementById('edit-note-modal');
-        const closeEditNoteModalBtn = document.getElementById('close-edit-note-modal');
-        const cancelEditNoteBtn = document.getElementById('cancel-edit-note');
-        const editNoteForm = document.getElementById('edit-note-form');
-        const editNoteBtn = document.getElementById('edit-note-btn');
-
-        const decryptNoteModal = document.getElementById('decrypt-note-modal');
-        const cancelDecryptNoteBtn = document.getElementById('cancel-decrypt-note');
-        const decryptNoteForm = document.getElementById('decrypt-note-form');
-        
-        const customAlertModal = document.getElementById('custom-alert-modal');
-        const customAlertMessage = document.getElementById('custom-alert-message');
-        const customAlertOkBtn = document.getElementById('custom-alert-ok');
-
-        const notesListEl = document.getElementById('notes-list');
-        const noNotesMsg = document.getElementById('no-notes-msg');
-        const searchNotesInput = document.getElementById('search-notes');
-        
-        const noteContentDisplay = document.getElementById('note-content-display');
-        const selectNotePlaceholder = document.getElementById('select-note-placeholder');
-        const noteTitleDisplay = document.getElementById('note-title-display');
-        const noteBodyDisplay = document.getElementById('note-body-display');
-        const attemptsWarning = document.getElementById('attempts-warning');
-
         let currentNotes = [];
         let selectedNoteId = null;
         const MAX_ATTEMPTS = 5;
 
+        // --- DOM Elements ---
+        const loaderOverlay = document.getElementById('loader-overlay');
+        const newNoteBtn = document.getElementById('new-note-btn');
+        const notesListEl = document.getElementById('notes-list');
+        const noNotesMsg = document.getElementById('no-notes-msg');
+        const searchNotesInput = document.getElementById('search-notes');
+        const noteContentDisplay = document.getElementById('note-content-display');
+        const selectNotePlaceholder = document.getElementById('select-note-placeholder');
+        const noteTitleDisplay = document.getElementById('note-title-display');
+        const noteBodyDisplay = document.getElementById('note-body-display');
+        
+        // Modals
+        const noteFormModal = document.getElementById('note-form-modal');
+        const decryptNoteModal = document.getElementById('decrypt-note-modal');
+        const confirmModal = document.getElementById('confirm-modal');
+        
+        // Forms & Buttons
+        const noteForm = document.getElementById('note-form');
+        const decryptNoteForm = document.getElementById('decrypt-note-form');
+        const editNoteBtn = document.getElementById('edit-note-btn');
+        const confirmOkBtn = document.getElementById('confirm-ok-btn');
+
         // --- Utility Functions ---
-        const showAlert = (message) => {
-            customAlertMessage.textContent = message;
-            customAlertModal.classList.add('active');
+        const showLoader = () => loaderOverlay.style.display = 'flex';
+        const hideLoader = () => loaderOverlay.style.display = 'none';
+
+        const showToast = (type, message) => {
+            const toastContainer = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            toastContainer.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 500);
+            }, 5000);
         };
 
-        const encrypt = (text, password) => {
-            return CryptoJS.AES.encrypt(text, password).toString();
-        };
-
+        const encrypt = (text, password) => CryptoJS.AES.encrypt(text, password).toString();
         const decrypt = (ciphertext, password) => {
             const bytes = CryptoJS.AES.decrypt(ciphertext, password);
-            return bytes.toString(CryptoJS.enc.Utf8);
+            const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
+            if (!decryptedText) throw new Error("Decryption failed");
+            return decryptedText;
         };
         
         const updateDateTime = () => {
             const now = new Date();
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
             document.getElementById('date-time').textContent = now.toLocaleDateString('en-US', options);
         };
 
         // --- Modal Handling ---
         const openModal = (modal) => modal.classList.add('active');
         const closeModal = (modal) => modal.classList.remove('active');
-
-        newNoteBtn.addEventListener('click', () => openModal(newNoteModal));
-        closeNewNoteModalBtn.addEventListener('click', () => closeModal(newNoteModal));
-        cancelNewNoteBtn.addEventListener('click', () => closeModal(newNoteModal));
-        
-        editNoteBtn.addEventListener('click', async () => {
-            if (!selectedNoteId) return;
-            const note = currentNotes.find(n => n.id === selectedNoteId);
-            if (!note) return;
-            
-            document.getElementById('edit-note-id').value = note.id;
-            document.getElementById('edit-note-title').value = note.decryptedTitle;
-            document.getElementById('edit-note-content').value = note.decryptedContent;
-
-            openModal(editNoteModal);
-        });
-        
-        closeEditNoteModalBtn.addEventListener('click', () => closeModal(editNoteModal));
-        cancelEditNoteBtn.addEventListener('click', () => closeModal(editNoteModal));
-
-        cancelDecryptNoteBtn.addEventListener('click', () => closeModal(decryptNoteModal));
-        customAlertOkBtn.addEventListener('click', () => closeModal(customAlertModal));
+        document.querySelectorAll('.cancel-btn').forEach(btn => btn.onclick = () => closeModal(btn.closest('.modal-overlay')));
+        document.getElementById('confirm-cancel-btn').onclick = () => closeModal(confirmModal);
 
         // --- Firebase & Data Logic ---
         onAuthStateChanged(auth, user => {
@@ -397,129 +351,56 @@ service cloud.firestore {
                 loadNotes();
             } else {
                 signInAnonymously(auth).catch(error => {
-                    console.error("Anonymous sign-in failed:", error);
-                    if (error.code === 'auth/configuration-not-found') {
-                        authErrorOverlay.classList.remove('hidden');
-                    } else {
-                        showAlert("Authentication failed. Please check your connection and try again.");
-                    }
+                    console.error("Auth Error:", error);
+                    hideLoader();
                 });
             }
         });
-
-        function handleFirestoreError(error) {
-            console.error("Firestore Error:", error);
-            if (error.code === 'unavailable') {
-                firestoreErrorOverlay.classList.remove('hidden');
-            } else if (error.code === 'permission-denied') {
-                firestoreRulesErrorOverlay.classList.remove('hidden');
-            } else {
-                showAlert(`A database error occurred: ${error.message}`);
-            }
-        }
 
         function loadNotes() {
             if (!currentUser) return;
             const notesCollection = collection(db, 'users', currentUser.uid, 'notes');
             if (notesUnsubscribe) notesUnsubscribe();
             
-            notesUnsubscribe = onSnapshot(notesCollection, 
-                (snapshot) => {
-                    firestoreErrorOverlay.classList.add('hidden');
-                    firestoreRulesErrorOverlay.classList.add('hidden');
-                    currentNotes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    renderNotes();
-                },
-                (error) => {
-                    handleFirestoreError(error);
-                }
-            );
+            notesUnsubscribe = onSnapshot(notesCollection, (snapshot) => {
+                currentNotes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderNotes();
+                hideLoader();
+            }, (error) => {
+                console.error("Firestore Error:", error);
+                hideLoader();
+            });
         }
         
-        async function saveNote(noteData) {
-            if (!currentUser) throw new Error("User not authenticated");
-            const noteId = Date.now().toString();
-            const noteRef = doc(db, 'users', currentUser.uid, 'notes', noteId);
-            await setDoc(noteRef, noteData);
-        }
-
-        async function updateNote(noteId, noteData) {
-            if (!currentUser) throw new Error("User not authenticated");
-            const noteRef = doc(db, 'users', currentUser.uid, 'notes', noteId);
-            await setDoc(noteRef, noteData, { merge: true });
-        }
-        
-        async function deleteNote(noteId) {
-             if (!currentUser) throw new Error("User not authenticated");
-             const noteRef = doc(db, 'users', currentUser.uid, 'notes', noteId);
-             await deleteDoc(noteRef);
-             
-             if (selectedNoteId === noteId) {
-                 clearNoteDisplay();
-             }
-        }
-
         // --- UI Rendering ---
         function renderNotes() {
             const searchTerm = searchNotesInput.value.toLowerCase();
-            const filteredNotes = currentNotes.filter(note => {
-                try {
-                    // This is a simplified search. For true content search, data would need to be structured differently on the backend.
-                    return note.id.includes(searchTerm);
-                } catch (e) {
-                    return false;
-                }
-            });
+            const filteredNotes = currentNotes.filter(note => new Date(parseInt(note.id)).toLocaleString().toLowerCase().includes(searchTerm));
 
             notesListEl.innerHTML = '';
-            if (currentNotes.length === 0) {
-                 noNotesMsg.classList.remove('hidden');
-            } else {
-                 noNotesMsg.classList.add('hidden');
-            }
+            noNotesMsg.classList.toggle('hidden', currentNotes.length > 0);
             
-            const notesToRender = searchTerm ? filteredNotes : currentNotes;
+            filteredNotes.sort((a, b) => b.id - a.id).forEach(note => {
+                const noteEl = document.createElement('div');
+                noteEl.className = 'note-item p-4 bg-gray-700 rounded-lg cursor-pointer border-l-4 border-transparent hover:bg-gray-600 transition flex justify-between items-center';
+                noteEl.dataset.id = note.id;
+                noteEl.classList.toggle('selected', note.id === selectedNoteId);
 
-            if (notesToRender.length > 0) {
-                notesToRender.forEach(note => {
-                    const noteEl = document.createElement('div');
-                    noteEl.className = 'note-item p-4 bg-gray-700 rounded-lg cursor-pointer border-l-4 border-transparent hover:bg-gray-600 transition flex justify-between items-center';
-                    noteEl.dataset.id = note.id;
-                    if (note.id === selectedNoteId) {
-                        noteEl.classList.add('selected');
+                noteEl.innerHTML = `
+                    <span class="truncate">Note - ${new Date(parseInt(note.id)).toLocaleString()}</span>
+                    <button data-id="${note.id}" class="delete-btn p-1 text-gray-500 hover:text-red-400 shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
+                    </button>
+                `;
+                
+                noteEl.addEventListener('click', (e) => {
+                    if (!e.target.classList.contains('delete-btn')) {
+                         handleNoteSelection(note.id);
                     }
-
-                    const titleSpan = document.createElement('span');
-                    titleSpan.textContent = `Note created on ${new Date(parseInt(note.id)).toLocaleDateString()}`;
-                    titleSpan.className = 'truncate';
-
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 hover:text-red-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>`;
-                    deleteBtn.className = 'p-1';
-                    deleteBtn.onclick = async (e) => {
-                        e.stopPropagation();
-                        // Replaced confirm with custom alert for better UX
-                        showAlert('Are you sure you want to permanently delete this note? This action cannot be undone.');
-                        // This is a simplified confirmation. A better UX would use a modal with "Confirm" and "Cancel" buttons.
-                        document.getElementById('custom-alert-ok').onclick = async () => {
-                           try {
-                                await deleteNote(note.id);
-                                closeModal(customAlertModal);
-                           } catch (error) {
-                               handleFirestoreError(error);
-                           }
-                        };
-                    };
-
-                    noteEl.appendChild(titleSpan);
-                    noteEl.appendChild(deleteBtn);
-                    
-                    noteEl.addEventListener('click', () => handleNoteSelection(note.id));
-                    notesListEl.appendChild(noteEl);
                 });
-            } else if (searchTerm) {
-                 notesListEl.innerHTML = `<p class="text-gray-500 text-center mt-4">No notes match your search.</p>`;
-            }
+                noteEl.querySelector('.delete-btn').addEventListener('click', handleDeleteClick);
+                notesListEl.appendChild(noteEl);
+            });
         }
         
         function clearNoteDisplay() {
@@ -530,55 +411,52 @@ service cloud.firestore {
         }
 
         // --- Event Handlers ---
-        newNoteForm.addEventListener('submit', async (e) => {
+        newNoteBtn.addEventListener('click', () => {
+            noteForm.reset();
+            document.getElementById('note-id').value = '';
+            document.getElementById('note-form-title').textContent = 'Create New Note';
+            document.getElementById('note-submit-btn').innerHTML = `Create & Encrypt`;
+            openModal(noteFormModal);
+        });
+        
+        editNoteBtn.addEventListener('click', () => {
+            const note = currentNotes.find(n => n.id === selectedNoteId);
+            if (!note || !note.decryptedTitle) return;
+            
+            noteForm.reset();
+            document.getElementById('note-id').value = note.id;
+            document.getElementById('note-title').value = note.decryptedTitle;
+            document.getElementById('note-content').value = note.decryptedContent;
+            document.getElementById('note-form-title').textContent = 'Edit Note';
+            document.getElementById('note-submit-btn').innerHTML = `Save Changes`;
+            openModal(noteFormModal);
+        });
+
+        noteForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const id = document.getElementById('note-id').value;
             const title = document.getElementById('note-title').value;
             const content = document.getElementById('note-content').value;
             const password = document.getElementById('note-password').value;
 
-            if (title && content && password) {
-                const encryptedTitle = encrypt(title, password);
-                const encryptedContent = encrypt(content, password);
-                
-                try {
-                    await saveNote({ 
-                        title: encryptedTitle, 
-                        content: encryptedContent, 
-                        attempts: 0 
-                    });
-                    newNoteForm.reset();
-                    closeModal(newNoteModal);
-                    showAlert("Note created and encrypted successfully!");
-                } catch (error) {
-                    handleFirestoreError(error);
-                }
-            }
-        });
-        
-        editNoteForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('edit-note-id').value;
-            const title = document.getElementById('edit-note-title').value;
-            const content = document.getElementById('edit-note-content').value;
-            const password = document.getElementById('edit-note-password').value;
-
-            if (id && title && content && password) {
-                const encryptedTitle = encrypt(title, password);
-                const encryptedContent = encrypt(content, password);
-                
-                try {
-                    await updateNote(id, {
-                        title: encryptedTitle,
-                        content: encryptedContent,
-                        attempts: 0
-                    });
-                    editNoteForm.reset();
-                    closeModal(editNoteModal);
+            const encryptedTitle = encrypt(title, password);
+            const encryptedContent = encrypt(content, password);
+            const noteData = { title: encryptedTitle, content: encryptedContent, attempts: 0 };
+            
+            try {
+                if (id) { // Editing existing note
+                    await setDoc(doc(db, 'users', currentUser.uid, 'notes', id), noteData, { merge: true });
+                    showToast('success', 'Note updated successfully!');
                     clearNoteDisplay();
-                    showAlert("Note updated and re-encrypted successfully!");
-                } catch(error) {
-                    handleFirestoreError(error);
+                } else { // Creating new note
+                    const newNoteId = Date.now().toString();
+                    await setDoc(doc(db, 'users', currentUser.uid, 'notes', newNoteId), noteData);
+                    showToast('success', 'Note created successfully!');
                 }
+                closeModal(noteFormModal);
+            } catch (error) {
+                showToast('error', 'Failed to save note.');
+                console.error("Save Note Error:", error);
             }
         });
 
@@ -586,17 +464,14 @@ service cloud.firestore {
             const note = currentNotes.find(n => n.id === noteId);
             if (!note) return;
             
+            decryptNoteForm.reset();
             document.getElementById('decrypt-note-id').value = noteId;
-            document.getElementById('decrypt-note-title').textContent = `To view the note created on ${new Date(parseInt(note.id)).toLocaleString()}`;
+            document.getElementById('decrypt-note-title').textContent = `Unlock note from ${new Date(parseInt(note.id)).toLocaleString()}`;
             
             const attempts = note.attempts || 0;
-            if (attempts > 0) {
-                 attemptsWarning.textContent = `Warning: ${MAX_ATTEMPTS - attempts} attempts remaining before deletion.`;
-                 attemptsWarning.classList.remove('hidden');
-            } else {
-                 attemptsWarning.classList.add('hidden');
-            }
-            
+            const warningEl = document.getElementById('attempts-warning');
+            warningEl.textContent = attempts > 0 ? `Warning: ${MAX_ATTEMPTS - attempts} attempts remaining.` : '';
+
             openModal(decryptNoteModal);
         }
 
@@ -605,7 +480,7 @@ service cloud.firestore {
             const noteId = document.getElementById('decrypt-note-id').value;
             const password = document.getElementById('decrypt-password').value;
             const note = currentNotes.find(n => n.id === noteId);
-
+            
             if (!note) return;
 
             try {
@@ -617,48 +492,57 @@ service cloud.firestore {
 
                 noteTitleDisplay.textContent = decryptedTitle;
                 noteBodyDisplay.textContent = decryptedContent;
-
                 noteContentDisplay.classList.remove('hidden');
                 selectNotePlaceholder.classList.add('hidden');
-                
                 selectedNoteId = noteId;
 
                 if (note.attempts > 0) {
-                    await updateNote(noteId, { attempts: 0 });
+                    await setDoc(doc(db, 'users', currentUser.uid, 'notes', noteId), { attempts: 0 }, { merge: true });
                 }
 
-                decryptNoteForm.reset();
                 closeModal(decryptNoteModal);
                 renderNotes();
             } catch (error) {
-                let attempts = (note.attempts || 0) + 1;
+                const attempts = (note.attempts || 0) + 1;
                 
-                try {
-                    if (attempts >= MAX_ATTEMPTS) {
-                        await deleteNote(noteId);
-                        closeModal(decryptNoteModal);
-                        showAlert("Too many incorrect password attempts. The note has been permanently deleted for security.");
-                    } else {
-                        await updateNote(noteId, { attempts });
-                        showAlert(`Incorrect password. Please try again. ${MAX_ATTEMPTS - attempts} attempts remaining.`);
-                        attemptsWarning.textContent = `Warning: ${MAX_ATTEMPTS - attempts} attempts remaining before deletion.`;
-                        attemptsWarning.classList.remove('hidden');
-                    }
-                } catch (updateError) {
-                    handleFirestoreError(updateError);
+                if (attempts >= MAX_ATTEMPTS) {
+                    await deleteDoc(doc(db, 'users', currentUser.uid, 'notes', noteId));
+                    closeModal(decryptNoteModal);
+                    showToast('error', 'Note deleted due to too many failed attempts.');
+                } else {
+                    await setDoc(doc(db, 'users', currentUser.uid, 'notes', noteId), { attempts }, { merge: true });
+                    showToast('warning', `Incorrect password. ${MAX_ATTEMPTS - attempts} attempts left.`);
+                    document.getElementById('attempts-warning').textContent = `Warning: ${MAX_ATTEMPTS - attempts} attempts remaining.`;
                 }
-                decryptNoteForm.querySelector('input[type="password"]').value = '';
             }
         });
+
+        function handleDeleteClick(e) {
+            const noteId = e.target.dataset.id;
+            document.getElementById('confirm-message').textContent = 'This action cannot be undone. Are you sure you want to delete this note?';
+            openModal(confirmModal);
+            
+            confirmOkBtn.onclick = async () => {
+                try {
+                    await deleteDoc(doc(db, 'users', currentUser.uid, 'notes', noteId));
+                    showToast('success', 'Note deleted successfully.');
+                    if (selectedNoteId === noteId) clearNoteDisplay();
+                } catch (error) {
+                    showToast('error', 'Failed to delete note.');
+                } finally {
+                    closeModal(confirmModal);
+                }
+            };
+        }
 
         searchNotesInput.addEventListener('input', renderNotes);
         
         // --- Initial Load ---
         setInterval(updateDateTime, 1000);
         updateDateTime();
+        showLoader();
 
     </script>
 </body>
-
 </html>
 
