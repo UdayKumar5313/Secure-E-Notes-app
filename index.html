@@ -98,7 +98,7 @@
     <div id="toast-container"></div>
     <div id="print-area" class="hidden"></div>
     <div id="app-container" class="hidden">
-        <div class="container mx-auto p-4 md-p-8">
+        <div class="container mx-auto p-4 md:p-8">
             <header class="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-dynamic pb-6">
                 <div>
                     <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-pink-500">Secure E-Notes</h1>
@@ -432,23 +432,6 @@
                 console.error("Failed to log activity:", error);
             }
         };
-
-        async function initializeAppSecurity() {
-            const salt = localStorage.getItem(MASTER_PASS_CONFIG.saltKey);
-            if (salt) {
-                el('master-password-setup').classList.add('hidden');
-                el('master-password-login').classList.remove('hidden');
-            } else {
-                 el('master-password-setup').classList.remove('hidden');
-                 el('master-password-login').classList.add('hidden');
-            }
-            openModal(appLockModal);
-        }
-        
-        async function handleAppLoad() {
-            // Replaced share link logic with standard app start
-            initializeAppSecurity();
-        }
         
         async function completeLogin() {
             onAuthStateChanged(auth, user => { 
@@ -1016,7 +999,31 @@
         document.querySelectorAll('.modal-overlay').forEach(modal => { modal.addEventListener('click', (e) => { if (e.target === modal) { if (modal === noteFormModal) { clearDraft(); } closeModal(modal); } }); });
         
         // --- App Initialization ---
-        handleAppLoad();
+        // A simple inline script will handle the initial display of the lock modal.
+        // This module script will attach the form handlers once it's loaded.
+    </script>
+    <script>
+        // This script runs immediately, without waiting for modules, to show the login UI.
+        (function() {
+            const el = (id) => document.getElementById(id);
+            const appLockModal = el('app-lock-modal');
+            const masterPasswordSetup = el('master-password-setup');
+            const masterPasswordLogin = el('master-password-login');
+            const MASTER_PASS_SALT_KEY = 'masterPassSalt';
+
+            if (appLockModal) {
+                appLockModal.classList.add('active');
+            }
+
+            const salt = localStorage.getItem(MASTER_PASS_SALT_KEY);
+            if (salt) {
+                if(masterPasswordSetup) masterPasswordSetup.classList.add('hidden');
+                if(masterPasswordLogin) masterPasswordLogin.classList.remove('hidden');
+            } else {
+                if(masterPasswordSetup) masterPasswordSetup.classList.remove('hidden');
+                if(masterPasswordLogin) masterPasswordLogin.classList.add('hidden');
+            }
+        })();
     </script>
 </body>
 </html>
