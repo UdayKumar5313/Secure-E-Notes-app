@@ -475,6 +475,15 @@
 
         function loadNotes() { 
             if (!currentUser) return; 
+
+            // --- Optimization: Show immediate loading state in the notes panel ---
+            notesListEl.innerHTML = `
+                <div class="flex justify-center items-center h-full p-8">
+                    <div class="w-6 h-6 border-4 border-dashed rounded-full animate-spin border-purple-500"></div>
+                </div>
+            `;
+            noNotesMsg.classList.add('hidden');
+
             const notesCollection = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'notes'); 
             if (notesUnsubscribe) notesUnsubscribe(); 
             notesUnsubscribe = onSnapshot(notesCollection, (snapshot) => { 
@@ -534,57 +543,23 @@
             });
         }
 
-        function renderAuditLogs(logs) {
-            const listEl = el('audit-log-list');
-            if (!listEl) return;
-            if (logs.length === 0) {
-                listEl.innerHTML = `<p class="text-gray-500 text-center py-8">No security events recorded yet.</p>`;
-                return;
-            }
-
-            const getIcon = (action) => {
-                const iconClass = "w-6 h-6 shrink-0";
-                switch(action) {
-                    case 'MASTER_LOGIN_SUCCESS': return `<svg class="${iconClass} text-green-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" /></svg>`;
-                    case 'MASTER_LOGIN_FAIL': return `<svg class="${iconClass} text-red-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>`;
-                    case 'NOTE_DECRYPT_SUCCESS': return `<svg class="${iconClass} text-green-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h16.5a1.5 1.5 0 001.5-1.5v-6a1.5 1.5 0 00-1.5-1.5H3.75a1.5 1.5 0 00-1.5 1.5v6a1.5 1.5 0 001.5 1.5z" /></svg>`;
-                    case 'NOTE_DECRYPT_FAIL': return `<svg class="${iconClass} text-yellow-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>`;
-                    case 'NOTE_CREATED': case 'NOTE_UPDATED': case 'NOTE_RESTORED': return `<svg class="${iconClass} text-blue-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>`;
-                    case 'NOTE_TRASHED': case 'NOTE_DELETED_PERMANENTLY': case 'NOTE_DELETED_MAX_ATTEMPTS': return `<svg class="${iconClass} text-red-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>`;
-                    case 'DATA_EXPORTED': case 'DATA_IMPORTED': return `<svg class="${iconClass} text-indigo-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375" /></svg>`;
-                    default: return `<svg class="${iconClass} text-gray-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg>`;
-                }
-            };
-            
-            listEl.innerHTML = logs.map(log => {
-                const date = new Date(log.timestamp).toLocaleString();
-                const actionText = log.action.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-                let detailsText = '';
-                if (log.details && log.details.noteId) {
-                    const note = [...currentNotes, ...trashedNotes].find(n => n.id === log.details.noteId);
-                    const title = note?.decryptedTitleCache || note?.decryptedTitle || `ID ${log.details.noteId.substring(0, 6)}...`;
-                    detailsText = `Note: <span class="font-semibold">${title}</span>`;
-                } else if (log.action === 'DATA_IMPORTED') {
-                     detailsText = `${log.details.noteCount} notes imported.`;
-                }
-                
-                return `
-                    <div class="flex items-start gap-4 p-2.5 rounded-lg hover:bg-dynamic-tertiary/50 transition-colors duration-200">
-                        ${getIcon(log.action)}
-                        <div class="flex-grow">
-                            <p class="font-semibold text-dynamic-primary">${actionText}</p>
-                            <p class="text-sm text-dynamic-secondary">${detailsText}</p>
-                        </div>
-                        <p class="text-xs text-dynamic-secondary shrink-0 pt-1">${date}</p>
-                    </div>
-                `;
-            }).join('');
-        }
-        
         function renderNotes() {
             const searchTerm = searchNotesInput.value.toLowerCase(); const selectedTag = tagFilter.value;
             const filteredNotes = currentNotes.filter(n => (n.decryptedTitleCache?.toLowerCase().includes(searchTerm) || new Date(parseInt(n.id)).toLocaleString().toLowerCase().includes(searchTerm)) && (!selectedTag || (n.tags && n.tags.includes(selectedTag))));
-            notesListEl.innerHTML = ''; noNotesMsg.classList.toggle('hidden', currentNotes.length > 0);
+            
+            notesListEl.innerHTML = ''; // Clear previous content (including loader)
+
+            // --- Optimization: Improved "no notes" message ---
+            if (currentNotes.length === 0) {
+                noNotesMsg.textContent = "You haven't created any notes yet.";
+                noNotesMsg.classList.remove('hidden');
+            } else if (filteredNotes.length === 0) {
+                noNotesMsg.textContent = "No notes match your search.";
+                noNotesMsg.classList.remove('hidden');
+            } else {
+                noNotesMsg.classList.add('hidden');
+            }
+
             updateTagFilter();
             filteredNotes.sort((a, b) => (b.pinned || false) - (a.pinned || false) || b.id - a.id).forEach(note => {
                 const noteEl = document.createElement('div');
@@ -1010,4 +985,5 @@
     </script>
 </body>
 </html>
+
 
